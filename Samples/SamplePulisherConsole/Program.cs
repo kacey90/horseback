@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using MessageBroker.Wrapper.AzureServiceBus.EventBus;
 using Microsoft.Extensions.DependencyInjection;
 using SamplePulisherConsole;
+using Microsoft.Extensions.Configuration;
 
 var host = CreateHostBuilder(args).Build();
 
@@ -40,9 +41,15 @@ while (true)
 
 static IHostBuilder CreateHostBuilder(string[] args) => 
     Host.CreateDefaultBuilder(args)
+        .ConfigureAppConfiguration((hostContext, config) =>
+        {
+            config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+            config.AddUserSecrets<Program>();
+        })
         .ConfigureServices((hostContext, services) =>
         {
-            services.AddAzureServiceBus("Endpoint=sb://thirdpartypartialdebit.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=HvfWutG40Qu52i0txPUM9EH3K2G0B0TiEvLm1669nDs=", "Sample.Broker");
+            string connectionString = hostContext.Configuration.GetConnectionString("AzureServiceBus") ?? "connection";
+            services.AddAzureServiceBus(connectionString, "Sample.Broker");
             services.AddTransient<PublisherSample>();
             services.AddTransient<PublishOrder>();
         });

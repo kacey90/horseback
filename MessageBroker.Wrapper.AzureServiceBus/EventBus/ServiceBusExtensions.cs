@@ -2,6 +2,8 @@
 using MessageBroker.Wrapper.Core.Abstractions;
 using MessageBroker.Wrapper.Core.EventBus;
 using MessageBroker.Wrapper.Core.EventBus.Mappers;
+using MessageBroker.Wrapper.Core.EventHandlers;
+using MessageBroker.Wrapper.Core.EventHandlers.Implementations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -48,7 +50,12 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
             where TIntegrationEvent : IntegrationEvent
             where TIntegrationEventHandler : class, IIntegrationEventHandler<TIntegrationEvent>
         {
-            builder.Services.AddScoped<IIntegrationEventHandler<TIntegrationEvent>, TIntegrationEventHandler>();
+            builder.Services.AddScoped<TIntegrationEventHandler>();
+
+            builder.Services.AddScoped<IIntegrationEventHandlerWrapper>(sp =>
+                new IntegrationEventHandlerWrapper<TIntegrationEvent>(
+                    sp.GetRequiredService<TIntegrationEventHandler>()));
+
             builder.Services.AddScoped<IEventSubscriber, 
                 EventSubscriber<TIntegrationEvent, TIntegrationEventHandler>>();
 

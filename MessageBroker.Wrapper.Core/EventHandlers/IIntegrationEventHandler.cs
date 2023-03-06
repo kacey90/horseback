@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
+using MessageBroker.Wrapper.Core.EventBus;
 
-namespace MessageBroker.Wrapper.Core.EventBus
+namespace MessageBroker.Wrapper.Core.EventHandlers
 {
     public interface IIntegrationEventHandler
     {

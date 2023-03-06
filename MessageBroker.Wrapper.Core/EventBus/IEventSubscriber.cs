@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using MessageBroker.Wrapper.Core.EventHandlers;
 
 namespace MessageBroker.Wrapper.Core.EventBus
 {

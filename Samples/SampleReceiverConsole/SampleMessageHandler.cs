@@ -1,4 +1,5 @@
 ﻿using MessageBroker.Wrapper.Core.EventBus;
+using MessageBroker.Wrapper.Core.EventHandlers;
 
 namespace SampleReceiverConsole;
 public class SampleMessageHandler : IIntegrationEventHandler<SampleMessage>

@@ -12,6 +12,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using MessageBroker.Wrapper.Core.EventBus.Mappers;
 using System.Reflection;
+using MessageBroker.Wrapper.Core.EventHandlers;
 
 namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
 {
@@ -67,17 +68,15 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
                 var message = JsonSerializer.Deserialize(args.Message.Body.ToString(), messageType);
 
                 using var scope = _serviceProvider.CreateScope();
-                var handlerInterfaceType = typeof(IIntegrationEventHandler<>).MakeGenericType(messageType);
-
-                var handlerTypes = scope.ServiceProvider.GetServices<IIntegrationEventHandler<TIntegrationEvent>>()
-                    //.Where(handler => handler.GetType().GetInterfaces().Any(i =>
-                    //    i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>) &&
-                    //    i.GetGenericArguments().Single() == messageType))
+                var handlers = scope.ServiceProvider.GetServices<IIntegrationEventHandlerWrapper>()
+                    .Where(x => x.EventType == messageType)
                     .ToList();
 
-                foreach (var eventHandler in handlerTypes)
+                foreach (var eventHandler in handlers)
                 {
-                   // var typedEventHandler = (IIntegrationEventHandler<TIntegrationEvent>)eventHandler;
+                    _logger.LogInformation("Integration Event Type (Generic): {IntegrationEventType}", typeof(TIntegrationEvent).Name);
+                    _logger.LogInformation("Integration Event Type (Message): {IntegrationEventType}", messageType.Name);
+                    // var typedEventHandler = (IIntegrationEventHandler<TIntegrationEvent>)eventHandler;
                     await eventHandler.Handle((TIntegrationEvent)message);
                 }
 

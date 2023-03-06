@@ -2,6 +2,7 @@
 using Azure.Messaging.ServiceBus.Administration;
 using MessageBroker.Wrapper.AzureServiceBus.EventBus.Configuration;
 using MessageBroker.Wrapper.Core.EventBus;
+using MessageBroker.Wrapper.Core.EventHandlers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
