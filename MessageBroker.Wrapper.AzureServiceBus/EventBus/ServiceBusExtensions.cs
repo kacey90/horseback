@@ -1,16 +1,16 @@
-﻿using MessageBroker.Wrapper.AzureServiceBus.EventBus.Configuration;
+﻿using Azure.Messaging.ServiceBus.Administration;
+using MessageBroker.Wrapper.AzureServiceBus.EventBus.Configuration;
 using MessageBroker.Wrapper.Core.Abstractions;
 using MessageBroker.Wrapper.Core.EventBus;
 using MessageBroker.Wrapper.Core.EventBus.Mappers;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
 {
@@ -59,10 +59,17 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
             return builder;
         }
 
-        public static void InitializeAzureEventSubscribers(this IHost app, ILogger? logger = null)
+        public static async Task InitializeAzureEventSubscribers<T>(this IHost app, string topicName = "", ILogger? logger = null)
         {
             // get all the registrations of IEventSubscriber<TIntegrationEvent, TIntegrationEventHandler> from the service provider
             var serviceProvider = app.Services;
+            var azureServiceBusConfig = serviceProvider.GetRequiredService<AzureServiceBusSubscriberConfiguration>();
+            var topic = string.IsNullOrEmpty(topicName) ? azureServiceBusConfig.TopicName : topicName;
+            var subscriptionName = $"{topic}_{typeof(T).Assembly.FullName.Split(',')[0].Trim()}_subscription";
+            var administrationClient = new ServiceBusAdministrationClient(azureServiceBusConfig.ConnectionString);
+            await Task.WhenAll(
+                CreateTopic(topic, administrationClient, logger),
+                CreateSubscription(azureServiceBusConfig.TopicName, subscriptionName, administrationClient, logger));
             var eventSubRegistrations = serviceProvider.GetServices<IEventSubscriber>().ToList();
             foreach (var eventSubscriber in eventSubRegistrations)
             {
@@ -73,7 +80,33 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
                     integrationEventType = eventSubscriberType.GetGenericArguments()[0];
                 }
                 logger?.LogInformation("Subscription for {IntegrationEvent}", integrationEventType is null ? "Unknown Type" : integrationEventType.FullName);
-                eventSubscriber.Subscribe();
+                await eventSubscriber.Subscribe();
+            }
+        }
+
+        private static async Task CreateTopic(string topicName,
+                                              ServiceBusAdministrationClient adminClient,
+                                              ILogger? logger,
+                                              CancellationToken cancellationToken = default)
+        {
+            if (!await adminClient.TopicExistsAsync(topicName, cancellationToken))
+            {
+                logger?.LogInformation("Creating topic {TopicName} in Azure Service Bus...", topicName);
+                await adminClient.CreateTopicAsync(topicName, cancellationToken);
+            }
+        }
+
+        private static async Task CreateSubscription(
+            string topicName,
+            string subscriptionName,
+            ServiceBusAdministrationClient adminClient,
+            ILogger? logger,
+            CancellationToken cancellationToken = default)
+        {
+            if (!await adminClient.SubscriptionExistsAsync(topicName, subscriptionName))
+            {
+                logger?.LogInformation("Creating subscription {SubscriptionName} in Azure Service Bus...", subscriptionName);
+                await adminClient.CreateSubscriptionAsync(topicName, subscriptionName);
             }
         }
 

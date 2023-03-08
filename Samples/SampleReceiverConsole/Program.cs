@@ -4,17 +4,24 @@ using MessageBroker.Wrapper.AzureServiceBus.EventBus;
 using SampleReceiverConsole;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 var host = CreateHostBuilder(args).Build();
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
-host.InitializeAzureEventSubscribers(logger);
+await host.InitializeAzureEventSubscribers<Program>(logger: logger);
 Console.ReadLine();
 
 static IHostBuilder CreateHostBuilder(string[] args) =>
     Host.CreateDefaultBuilder(args)
-        .ConfigureServices(services =>
+        .ConfigureAppConfiguration((hostContext, config) =>
         {
-            services.AddAzureServiceBus("Endpoint=sb://thirdpartypartialdebit.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=HvfWutG40Qu52i0txPUM9EH3K2G0B0TiEvLm1669nDs=", "Sample.Broker")
+            config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+            config.AddUserSecrets<Program>();
+        })
+        .ConfigureServices((hostContext, services) =>
+        {
+            string connectionString = hostContext.Configuration.GetConnectionString("AzureServiceBus") ?? "your-connection";
+            services.AddAzureServiceBus(connectionString, "Sample.Broker")
             .AddReceiver<SampleMessage, SampleMessageHandler>(nameof(SampleMessage))
             .AddReceiver<OrderSentMessage, OrderSentMessageHandler>(nameof(OrderSentMessage));
         });

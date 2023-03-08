@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using MessageBroker.Wrapper.Core.EventBus.Mappers;
-using System.Reflection;
 
 namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
 {
@@ -25,6 +24,8 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
         private readonly ILogger<EventSubscriber<TIntegrationEvent, TIntegrationEventHandler>> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly IntegrationEventMappingService _integrationEventMappingService;
+
+        private ServiceBusProcessor _serviceBusProcessor = null!;
 
         public EventSubscriber(
             AzureServiceBusSubscriberConfiguration azureServiceBusSubConfig,
@@ -45,19 +46,13 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
             var topicName = topic ?? _azureServiceBusSubConfig.TopicName;
             var subscriptionName = $"{topicName}_{typeof(TIntegrationEvent).Assembly.FullName.Split(',')[0].Trim()}_subscription";
             
-            await Task.WhenAll(
-                CreateTopic(topicName, cancellationToken),
-                CreateSubscription(topicName, subscriptionName, cancellationToken),
-                RemoveDefaultFilters(subscriptionName),
-                AddFilters(typeof(TIntegrationEvent), subscriptionName));
-
-            var serviceBusProcessor = _serviceBusClient.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions
+            _serviceBusProcessor = _serviceBusClient.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions
             {
                 AutoCompleteMessages = _azureServiceBusSubConfig.AutoCompleteMessage,
                 MaxConcurrentCalls = _azureServiceBusSubConfig.MaxConcurrentCalls
             });
 
-            serviceBusProcessor.ProcessMessageAsync += async args =>
+            _serviceBusProcessor.ProcessMessageAsync += async args =>
             {
                 _logger.LogInformation("Received event {EventId} from Azure Service Bus...", args.Message.MessageId);
 
@@ -65,52 +60,43 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
                 Type messageType = _integrationEventMappingService.IntegrationEventTypeMap[args.Message.ApplicationProperties["MessageType"].ToString()];
 
                 var message = JsonSerializer.Deserialize(args.Message.Body.ToString(), messageType);
+                //dynamic typedMessage = message;
+                //typedMessage = Convert.ChangeType(typedMessage, messageType);
 
                 using var scope = _serviceProvider.CreateScope();
-                var handlerInterfaceType = typeof(IIntegrationEventHandler<>).MakeGenericType(messageType);
+                //var handlerInterfaceType = typeof(IIntegrationEventHandler<>).MakeGenericType(messageType);
 
                 var handlerTypes = scope.ServiceProvider.GetServices<IIntegrationEventHandler<TIntegrationEvent>>()
-                    //.Where(handler => handler.GetType().GetInterfaces().Any(i =>
-                    //    i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>) &&
-                    //    i.GetGenericArguments().Single() == messageType))
+                    .Where(handler => handler.GetType().GetInterfaces().Any(i =>
+                        i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>) &&
+                        i.GetGenericArguments().Single() == messageType))
                     .ToList();
 
                 foreach (var eventHandler in handlerTypes)
                 {
                    // var typedEventHandler = (IIntegrationEventHandler<TIntegrationEvent>)eventHandler;
-                    await eventHandler.Handle((TIntegrationEvent)message);
+                   await eventHandler.Handle((TIntegrationEvent)message);
+                   //await eventHandler.Handle(typedMessage);
                 }
 
                 await args.CompleteMessageAsync(args.Message);
             };
 
-            serviceBusProcessor.ProcessErrorAsync += args =>
+            _serviceBusProcessor.ProcessErrorAsync += args =>
             {
                 _logger.LogError(args.Exception, "Error while processing event from Azure Service Bus...");
+                _logger.LogDebug($"- ErrorSource: {args.ErrorSource}");
+                _logger.LogDebug($"- Entity Path: {args.EntityPath}");
+                _logger.LogDebug($"- FullyQualifiedNamespace: {args.FullyQualifiedNamespace}");
                 return Task.CompletedTask;
             };
 
+            await RemoveDefaultFilters(subscriptionName);
+            await AddFilters(typeof(TIntegrationEvent), subscriptionName);
+
             _logger.LogInformation("Message processing started for topic {TopicName} and subscription {SubscriptionName}...",
                                topicName, subscriptionName);
-            await serviceBusProcessor.StartProcessingAsync(cancellationToken);
-        }
-
-        private async Task CreateTopic(string topicName, CancellationToken cancellationToken)
-        {
-            if (!await _administrationClient.TopicExistsAsync(topicName, cancellationToken))
-            {
-                _logger.LogInformation("Creating topic {TopicName} in Azure Service Bus...", topicName);
-                await _administrationClient.CreateTopicAsync(topicName, cancellationToken);
-            }
-        }
-
-        private async Task CreateSubscription(string topicName, string subscriptionName, CancellationToken cancellationToken)
-        {
-            if (!await _administrationClient.SubscriptionExistsAsync(topicName, subscriptionName))
-            {
-                _logger.LogInformation("Creating subscription {SubscriptionName} in Azure Service Bus...", subscriptionName);
-                await _administrationClient.CreateSubscriptionAsync(topicName, subscriptionName);
-            }
+            await _serviceBusProcessor.StartProcessingAsync(cancellationToken);
         }
 
         private async Task RemoveDefaultFilters(string subscriptionName)
@@ -145,6 +131,24 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
                 _logger.LogInformation("Creating {Rule} for topic {TopicName} and subscription {SubscriptionName}...",
                     createRuleOptions.Name, _azureServiceBusSubConfig.TopicName, subscriptionName);
                 await _administrationClient.CreateRuleAsync(_azureServiceBusSubConfig.TopicName, subscriptionName, createRuleOptions);
+            }
+        }
+
+        public async Task CloseQueueAsync()
+        {
+            await _serviceBusProcessor.CloseAsync();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_serviceBusProcessor != null)
+            {
+                await _serviceBusProcessor.DisposeAsync().ConfigureAwait(false);
+            }
+
+            if (_serviceBusClient != null)
+            {
+                await _serviceBusClient.DisposeAsync().ConfigureAwait(false);
             }
         }
     }
