@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace MessageBroker.Wrapper.Core.Abstractions
+namespace Horseback.Core.Abstractions
 {
     public interface IMessageBrokerBuilder
     {

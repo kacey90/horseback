@@ -1,4 +1,4 @@
-﻿using MessageBroker.Wrapper.Core.EventBus;
+﻿using Horseback.Core.EventBus;
 
 namespace SampleReceiverConsole2;
 public class OrderSentMessage : IntegrationEvent

@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using System;
 
-namespace MessageBroker.Wrapper.Core.EventBus
+namespace Horseback.Core.EventBus
 {
     public abstract class IntegrationEvent : INotification
     {

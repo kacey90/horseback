@@ -1,21 +1,31 @@
 ﻿using Azure.Messaging.ServiceBus.Administration;
-using MessageBroker.Wrapper.AzureServiceBus.EventBus.Configuration;
-using MessageBroker.Wrapper.Core.Abstractions;
-using MessageBroker.Wrapper.Core.EventBus;
-using MessageBroker.Wrapper.Core.EventBus.Mappers;
+using Horseback.Applications.AzureServiceBus.EventBus.Configuration;
+using Horseback.Core.Abstractions;
+using Horseback.Core.EventBus;
+using Horseback.Core.EventBus.Mappers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
+namespace Horseback.Applications.AzureServiceBus.EventBus
 {
     public static class ServiceBusExtensions
     {
+        /// <summary>
+        /// Adds the Azure Service Bus as a message broker
+        /// </summary>
+        /// <param name="services">service collection</param>
+        /// <param name="connectionString">azure service bus connection string</param>
+        /// <param name="topicName">name of Topic</param>
+        /// <param name="maxConcurrentCalls"></param>
+        /// <param name="customRetryCount"></param>
+        /// <param name="customRetryDelay"></param>
+        /// <param name="autoCompleteMessage"></param>
+        /// <returns></returns>
         public static IMessageBrokerBuilder AddAzureServiceBus(
             this IServiceCollection services,
             string connectionString,
@@ -38,19 +48,26 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
 
             services.AddSingleton<IMessagePublisher, MessagePublisher>();
             services.AddSingleton<IntegrationEventMappingService>();
-            //services.AddSingleton<IMessageSubscriber, MessageSubscriber>();
 
             return new DefaultMessageBrokerBuilder(services);
         }
 
+        /// <summary>
+        /// Add a receiver/subscriber for a specific integration event
+        /// </summary>
+        /// <typeparam name="TIntegrationEvent">Integration Event/Message Type</typeparam>
+        /// <typeparam name="TIntegrationEventHandler">Event Handler</typeparam>
+        /// <param name="builder"></param>
+        /// <param name="messageAction">specific tpye of message. Used to run filters on the topic</param>
+        /// <returns></returns>
         public static IMessageBrokerBuilder AddReceiver<TIntegrationEvent, TIntegrationEventHandler>(
             this IMessageBrokerBuilder builder, string messageAction)
             where TIntegrationEvent : IntegrationEvent
             where TIntegrationEventHandler : class, IIntegrationEventHandler<TIntegrationEvent>
         {
             builder.Services.AddScoped<IIntegrationEventHandler<TIntegrationEvent>, TIntegrationEventHandler>();
-            builder.Services.AddScoped<IEventSubscriber, 
-                EventSubscriber<TIntegrationEvent, TIntegrationEventHandler>>();
+            builder.Services.AddScoped<IMessageSubscriber, 
+                MessageSubscriber<TIntegrationEvent, TIntegrationEventHandler>>();
 
             var integrationEventMappingService = builder.Services.BuildServiceProvider().GetRequiredService<IntegrationEventMappingService>();
 
@@ -59,9 +76,17 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
             return builder;
         }
 
-        public static async Task InitializeAzureEventSubscribers<T>(this IHost app, string topicName = "", ILogger? logger = null)
+        /// <summary>
+        /// Setup the Azure Service Bus for the application
+        /// </summary>
+        /// <typeparam name="T">Type of the application's entry point. Mostly Program.cs</typeparam>
+        /// <param name="app"></param>
+        /// <param name="topicName">Topic Name in Azure Service Bus (optional). \nUse this if you intend to use a topic different from what you specified in the config.</param>
+        /// <param name="logger"></param>
+        /// <returns></returns>
+        public static async Task InitializeAzureServiceBus<T>(this IHost app, string topicName = "", ILogger? logger = null)
+            where T : class
         {
-            // get all the registrations of IEventSubscriber<TIntegrationEvent, TIntegrationEventHandler> from the service provider
             var serviceProvider = app.Services;
             var azureServiceBusConfig = serviceProvider.GetRequiredService<AzureServiceBusSubscriberConfiguration>();
             var topic = string.IsNullOrEmpty(topicName) ? azureServiceBusConfig.TopicName : topicName;
@@ -70,7 +95,7 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
             await Task.WhenAll(
                 CreateTopic(topic, administrationClient, logger),
                 CreateSubscription(azureServiceBusConfig.TopicName, subscriptionName, administrationClient, logger));
-            var eventSubRegistrations = serviceProvider.GetServices<IEventSubscriber>().ToList();
+            var eventSubRegistrations = serviceProvider.GetServices<IMessageSubscriber>().ToList();
             foreach (var eventSubscriber in eventSubRegistrations)
             {
                 Type? integrationEventType = null;
@@ -107,48 +132,6 @@ namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
             {
                 logger?.LogInformation("Creating subscription {SubscriptionName} in Azure Service Bus...", subscriptionName);
                 await adminClient.CreateSubscriptionAsync(topicName, subscriptionName);
-            }
-        }
-
-        public static void InitializeAzureServiceBus(this IHost app, ILogger? logger = null)
-        {
-            var serviceProvider = app.Services;
-            //var logger = serviceProvider.GetRequiredService<ILogger<MessageSubscriber>>();
-
-            var messageSubscriber = serviceProvider.GetRequiredService<IMessageSubscriber>();
-            if (messageSubscriber == null)
-            {
-                logger?.LogError("unable to resolve {0} service", nameof(IMessageSubscriber));
-                return;
-            }
-
-            // find subscribers with handlers
-            //var allInterfaces = from type in Assembly.GetEntryAssembly().GetTypes()
-            //                    select type;
-            var assembly = Assembly.GetCallingAssembly();
-            var integrationEventHandlerTypes = 
-                from type in assembly.GetTypes()
-                where type.GetInterfaces().Any(i => 
-                    i.IsGenericType && 
-                    i.GetGenericTypeDefinition() == typeof(IIntegrationEventHandler<>))
-                select type;
-
-            foreach (var integrationEventHandlerType in integrationEventHandlerTypes )
-            {
-                var messageSubscriberHandler = serviceProvider.GetService(integrationEventHandlerType);
-                if (messageSubscriberHandler == null)
-                {
-                    logger?.LogError("Unable to resolve {0} subscriber", integrationEventHandlerType.Name);
-                    continue;
-                }
-                var eventType = messageSubscriberHandler.GetType().GetInterfaces()[0].GetGenericArguments()[0];
-                if (eventType == null)
-                {
-                    logger?.LogError("Event Type is undefined");
-                    return;
-                }
-                logger?.LogInformation("Subscription for {IntegrationEvent}", eventType.FullName);
-                messageSubscriber.Subscribe(eventType, messageSubscriberHandler.GetType());
             }
         }
     }

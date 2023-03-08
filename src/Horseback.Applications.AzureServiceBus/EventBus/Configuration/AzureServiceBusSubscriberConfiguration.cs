@@ -1,6 +1,6 @@
-﻿using MessageBroker.Wrapper.Core.EventBus.Config;
+﻿using Horseback.Core.EventBus.Config;
 
-namespace MessageBroker.Wrapper.AzureServiceBus.EventBus.Configuration
+namespace Horseback.Applications.AzureServiceBus.EventBus.Configuration
 {
     public class AzureServiceBusSubscriberConfiguration : SubscriberConfiguration
     {

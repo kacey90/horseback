@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessageBroker.Wrapper.Core.EventBus
+namespace Horseback.Core.EventBus
 {
     /// <summary>
     /// Interface for publishing messages to the message broker.

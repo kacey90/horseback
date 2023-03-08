@@ -1,14 +1,12 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Microsoft.Extensions.Hosting;
-using MessageBroker.Wrapper.AzureServiceBus.EventBus;
 using Microsoft.Extensions.DependencyInjection;
+using Horseback.Applications.AzureServiceBus.EventBus;
 using SamplePulisherConsole;
 using Microsoft.Extensions.Configuration;
 
 var host = CreateHostBuilder(args).Build();
 
-//Console.WriteLine("Waiting for 15 secs...");
-//await Task.Delay(15000);
 
 for (int i = 0; i < 5; i++)
 {

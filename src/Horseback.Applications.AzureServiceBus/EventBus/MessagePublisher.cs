@@ -1,14 +1,14 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
-using MessageBroker.Wrapper.AzureServiceBus.EventBus.Configuration;
-using MessageBroker.Wrapper.Core.EventBus;
+using Horseback.Applications.AzureServiceBus.EventBus.Configuration;
+using Horseback.Core.EventBus;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
+namespace Horseback.Applications.AzureServiceBus.EventBus
 {
     /// <summary>
     /// Implementation to publish messages to Azure Service Bus

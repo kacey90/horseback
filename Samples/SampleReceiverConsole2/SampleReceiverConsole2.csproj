@@ -14,8 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\MessageBroker.Wrapper.AzureServiceBus\MessageBroker.Wrapper.AzureServiceBus.csproj" />
-    <ProjectReference Include="..\..\MessageBroker.Wrapper.Core\MessageBroker.Wrapper.Core.csproj" />
+    <ProjectReference Include="..\..\src\Horseback.Applications.AzureServiceBus\Horseback.Applications.AzureServiceBus.csproj" />
+    <ProjectReference Include="..\..\src\Horseback.Core\Horseback.Core.csproj" />
   </ItemGroup>
 
 </Project>

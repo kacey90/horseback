@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace MessageBroker.Wrapper.Core.EventBus.Mappers
+namespace Horseback.Core.EventBus.Mappers
 {
     public sealed class IntegrationEventMappingService
     {

@@ -1,6 +1,6 @@
 ﻿
 using Microsoft.Extensions.Hosting;
-using MessageBroker.Wrapper.AzureServiceBus.EventBus;
+using Horseback.Applications.AzureServiceBus.EventBus;
 using SampleReceiverConsole;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.Configuration;
 
 var host = CreateHostBuilder(args).Build();
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
-await host.InitializeAzureEventSubscribers<Program>(logger: logger);
+host.InitializeAzureServiceBus<Program>(logger: logger).GetAwaiter().GetResult();
 Console.ReadLine();
 
 static IHostBuilder CreateHostBuilder(string[] args) =>

@@ -1,7 +1,6 @@
 ﻿using Azure.Messaging.ServiceBus.Administration;
 using Azure.Messaging.ServiceBus;
-using MessageBroker.Wrapper.AzureServiceBus.EventBus.Configuration;
-using MessageBroker.Wrapper.Core.EventBus;
+using Horseback.Applications.AzureServiceBus.EventBus.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -10,26 +9,27 @@ using System.Text.Json;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
-using MessageBroker.Wrapper.Core.EventBus.Mappers;
+using Horseback.Core.EventBus;
+using Horseback.Core.EventBus.Mappers;
 
-namespace MessageBroker.Wrapper.AzureServiceBus.EventBus
+namespace Horseback.Applications.AzureServiceBus.EventBus
 {
-    internal class EventSubscriber<TIntegrationEvent, TIntegrationEventHandler> : IEventSubscriber<TIntegrationEvent, TIntegrationEventHandler>
+    internal class MessageSubscriber<TIntegrationEvent, TIntegrationEventHandler> : IMessageSubscriber<TIntegrationEvent, TIntegrationEventHandler>
         where TIntegrationEvent : IntegrationEvent
         where TIntegrationEventHandler : IIntegrationEventHandler<TIntegrationEvent>
     {
         private readonly ServiceBusClient _serviceBusClient;
         private readonly ServiceBusAdministrationClient _administrationClient;
         private readonly AzureServiceBusSubscriberConfiguration _azureServiceBusSubConfig;
-        private readonly ILogger<EventSubscriber<TIntegrationEvent, TIntegrationEventHandler>> _logger;
+        private readonly ILogger<MessageSubscriber<TIntegrationEvent, TIntegrationEventHandler>> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly IntegrationEventMappingService _integrationEventMappingService;
 
         private ServiceBusProcessor _serviceBusProcessor = null!;
 
-        public EventSubscriber(
+        public MessageSubscriber(
             AzureServiceBusSubscriberConfiguration azureServiceBusSubConfig,
-            ILogger<EventSubscriber<TIntegrationEvent, TIntegrationEventHandler>> logger,
+            ILogger<MessageSubscriber<TIntegrationEvent, TIntegrationEventHandler>> logger,
             IServiceProvider serviceProvider,
             IntegrationEventMappingService integrationEventMappingService)
         {

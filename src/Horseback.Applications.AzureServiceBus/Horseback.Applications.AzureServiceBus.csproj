@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MessageBroker.Wrapper.Core\MessageBroker.Wrapper.Core.csproj" />
+    <ProjectReference Include="..\Horseback.Core\Horseback.Core.csproj" />
   </ItemGroup>
 
 </Project>

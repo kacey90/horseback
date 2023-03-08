@@ -2,15 +2,15 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MessageBroker.Wrapper.Core.EventBus
+namespace Horseback.Core.EventBus
 {
-    public interface IEventSubscriber : IAsyncDisposable
+    public interface IMessageSubscriber : IAsyncDisposable
     {
         Task Subscribe(string? topic = null, CancellationToken cancellationToken = default);
         Task CloseQueueAsync();
     }
 
-    public interface IEventSubscriber<TIntegrationEvent, TIntegrationEventHandler> : IEventSubscriber
+    public interface IMessageSubscriber<TIntegrationEvent, TIntegrationEventHandler> : IMessageSubscriber
         where TIntegrationEvent : IntegrationEvent
         where TIntegrationEventHandler : IIntegrationEventHandler<TIntegrationEvent>
     {

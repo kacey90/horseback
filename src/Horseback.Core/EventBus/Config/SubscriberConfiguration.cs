@@ -1,4 +1,4 @@
-﻿namespace MessageBroker.Wrapper.Core.EventBus.Config
+﻿namespace Horseback.Core.EventBus.Config
 {
     public abstract class SubscriberConfiguration
     {
