@@ -56,15 +56,11 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
             {
                 _logger.LogInformation("Received event {EventId} from Azure Service Bus...", args.Message.MessageId);
 
-                //using var scope = _serviceProvider.CreateScope();
                 Type messageType = _integrationEventMappingService.IntegrationEventTypeMap[args.Message.ApplicationProperties["MessageType"].ToString()];
 
                 var message = JsonSerializer.Deserialize(args.Message.Body.ToString(), messageType);
-                //dynamic typedMessage = message;
-                //typedMessage = Convert.ChangeType(typedMessage, messageType);
-
+                
                 using var scope = _serviceProvider.CreateScope();
-                //var handlerInterfaceType = typeof(IIntegrationEventHandler<>).MakeGenericType(messageType);
 
                 var handlerTypes = scope.ServiceProvider.GetServices<IIntegrationEventHandler<TIntegrationEvent>>()
                     .Where(handler => handler.GetType().GetInterfaces().Any(i =>
@@ -74,9 +70,7 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
 
                 foreach (var eventHandler in handlerTypes)
                 {
-                   // var typedEventHandler = (IIntegrationEventHandler<TIntegrationEvent>)eventHandler;
                    await eventHandler.Handle((TIntegrationEvent)message);
-                   //await eventHandler.Handle(typedMessage);
                 }
 
                 await args.CompleteMessageAsync(args.Message);

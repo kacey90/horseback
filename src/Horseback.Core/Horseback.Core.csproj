@@ -1,13 +1,23 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
+    <Title>Horseback</Title>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+	<Version>1.0.1-beta-$([System.DateTime]::UtcNow.ToString(yyyyMMdd-HHmmss))</Version>
+    <Description>A simple message bus wrapper for distributed applications on .NET</Description>
+    <PackageProjectUrl></PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kacey90/horseback</RepositoryUrl>
+    <PackageTags>messaging; message bus; wrapper; distributed messaging; message broker;</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.0.123" />
     <PackageReference Include="MediatR" Version="11.1.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
   </ItemGroup>
 
 </Project>

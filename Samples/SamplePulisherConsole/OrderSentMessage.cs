@@ -7,7 +7,7 @@ public class OrderSentMessage : IntegrationEvent
 
     public decimal Amount { get; set; }
 
-    public string CustomerName { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
 
-    public string CustomerEmail { get; set; }
+    public string CustomerEmail { get; set; } = string.Empty;
 }

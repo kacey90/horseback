@@ -5,6 +5,7 @@ using SampleReceiverConsole2;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Horseback.Core.EventBus.Extensions;
 
 var host = CreateHostBuilder(args).Build();
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
@@ -21,6 +22,7 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
         .ConfigureServices((hostContext, services) =>
         {
             string connectionString = hostContext.Configuration.GetConnectionString("AzureServiceBus") ?? "your-connection";
-            services.AddAzureServiceBus(connectionString, "Sample.Broker")
-            .AddReceiver<OrderSentMessage, OrderSentMessageHandler>(nameof(OrderSentMessage));
+            services.AddHorseback()
+                .AddAzureServiceBus(connectionString, "Sample.Broker")
+                .AddReceiver<OrderSentMessage, OrderSentMessageHandler>(nameof(OrderSentMessage));
         });

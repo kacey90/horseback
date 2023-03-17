@@ -18,7 +18,7 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
         /// <summary>
         /// Adds the Azure Service Bus as a message broker
         /// </summary>
-        /// <param name="services">service collection</param>
+        /// <param name="horsebackBuilder">service collection</param>
         /// <param name="connectionString">azure service bus connection string</param>
         /// <param name="topicName">name of Topic</param>
         /// <param name="maxConcurrentCalls"></param>
@@ -27,7 +27,7 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
         /// <param name="autoCompleteMessage"></param>
         /// <returns></returns>
         public static IMessageBrokerBuilder AddAzureServiceBus(
-            this IServiceCollection services,
+            this IHorsebackBuilder horsebackBuilder,
             string connectionString,
             string topicName,
             int? maxConcurrentCalls = null,
@@ -42,38 +42,53 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
                 azureServiceBusConfig = new AzureServiceBusSubscriberConfiguration(connectionString, topicName, maxConcurrentCalls.Value, customRetryCount.Value, customRetryDelay.Value, autoCompleteMessage);
             else
                 azureServiceBusConfig = new AzureServiceBusSubscriberConfiguration(connectionString, topicName);
-            services.AddSingleton(azureServiceBusConfig);
+            horsebackBuilder.Services.AddSingleton(azureServiceBusConfig);
 
-            services.AddLogging();
+            horsebackBuilder.Services.AddSingleton<IMessagePublisher, MessagePublisher>();
 
-            services.AddSingleton<IMessagePublisher, MessagePublisher>();
-            services.AddSingleton<IntegrationEventMappingService>();
-
-            return new DefaultMessageBrokerBuilder(services);
+            return new DefaultMessageBrokerBuilder(horsebackBuilder);
         }
 
         /// <summary>
-        /// Add a receiver/subscriber for a specific integration event
+        /// Add a receiver/subscriber for a specific integration event with a specific handler
         /// </summary>
         /// <typeparam name="TIntegrationEvent">Integration Event/Message Type</typeparam>
         /// <typeparam name="TIntegrationEventHandler">Event Handler</typeparam>
         /// <param name="builder"></param>
-        /// <param name="messageAction">specific tpye of message. Used to run filters on the topic</param>
+        /// <param name="messageAction">specific type of message. Used to run filters on the topic</param>
         /// <returns></returns>
         public static IMessageBrokerBuilder AddReceiver<TIntegrationEvent, TIntegrationEventHandler>(
             this IMessageBrokerBuilder builder, string messageAction)
             where TIntegrationEvent : IntegrationEvent
             where TIntegrationEventHandler : class, IIntegrationEventHandler<TIntegrationEvent>
         {
-            builder.Services.AddScoped<IIntegrationEventHandler<TIntegrationEvent>, TIntegrationEventHandler>();
-            builder.Services.AddScoped<IMessageSubscriber, 
+            builder.HorsebackBuilder.Services.AddScoped<IIntegrationEventHandler<TIntegrationEvent>, TIntegrationEventHandler>();
+            builder.HorsebackBuilder.Services.AddScoped<IMessageSubscriber, 
                 MessageSubscriber<TIntegrationEvent, TIntegrationEventHandler>>();
 
-            var integrationEventMappingService = builder.Services.BuildServiceProvider().GetRequiredService<IntegrationEventMappingService>();
+            var integrationEventMappingService = builder.HorsebackBuilder.Services.BuildServiceProvider().GetRequiredService<IntegrationEventMappingService>();
 
-            integrationEventMappingService.IntegrationEventTypeMap.TryAdd(messageAction, typeof(TIntegrationEvent));
-            builder.Services.AddSingleton(integrationEventMappingService);
+            var isEventMappingPossible = integrationEventMappingService.IntegrationEventTypeMap.TryAdd(messageAction, typeof(TIntegrationEvent));
+            if (!isEventMappingPossible)
+                throw new Exception("Event mapping is not possible. Please ensure that this event is not already registered");
+
+            builder.HorsebackBuilder.Services.AddSingleton(integrationEventMappingService);
             return builder;
+        }
+
+        /// <summary>
+        /// Add a receiver for a specific integration event using the generic handler
+        /// </summary>
+        /// <typeparam name="TIntegrationEvent">Integration Event/Message Type</typeparam>
+        /// <param name="builder"></param>
+        /// <param name="messageAction">Specific type of message. Used to run filters on the topic</param>
+        /// <returns></returns>
+        public static IMessageBrokerBuilder AddReceiver<TIntegrationEvent>(
+            this IMessageBrokerBuilder builder, string messageAction)
+            where TIntegrationEvent : IntegrationEvent
+        {
+            return builder.AddReceiver<TIntegrationEvent, IntegrationEventGenericHandler<TIntegrationEvent>>(
+                messageAction);
         }
 
         /// <summary>

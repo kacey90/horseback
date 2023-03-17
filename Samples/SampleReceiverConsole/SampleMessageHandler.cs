@@ -13,5 +13,5 @@ public class SampleMessageHandler : IIntegrationEventHandler<SampleMessage>
 public class SampleMessage : IntegrationEvent
 {
     public Guid MessageId { get; set; }
-    public string Message { get; set; }
+    public string Message { get; set; } = string.Empty;
 }

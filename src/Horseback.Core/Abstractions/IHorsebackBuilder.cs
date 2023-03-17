@@ -2,8 +2,8 @@
 
 namespace Horseback.Core.Abstractions
 {
-    public interface IMessageBrokerBuilder
+    public interface IHorsebackBuilder
     {
-        IHorsebackBuilder HorsebackBuilder { get; }
+        IServiceCollection Services { get; }
     }
 }

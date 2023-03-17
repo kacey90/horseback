@@ -4,11 +4,11 @@ namespace Horseback.Core.Abstractions
 {
     public class DefaultMessageBrokerBuilder : IMessageBrokerBuilder
     {
-        public IServiceCollection Services { get; }
+        public IHorsebackBuilder HorsebackBuilder { get; }
 
-        public DefaultMessageBrokerBuilder(IServiceCollection services)
+        public DefaultMessageBrokerBuilder(IHorsebackBuilder builder)
         {
-            Services = services;
+            HorsebackBuilder = builder;
         }
     }
 }
