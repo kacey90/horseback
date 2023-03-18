@@ -10,8 +10,8 @@ Horseback intends to enable developers build distributed applications using a va
 # Getting Started
 ## Installation
 You can install Horseback and install the package of the queuing system extension of choice using NuGet: <br/><br/>
-`Install-Package Horseback.Core`
-`Install-Package Horseback.Applications.AzureServiceBus`<br/>
+`Install-Package Horseback.Core`<br/>
+`Install-Package Horseback.Applications.AzureServiceBus`<br/><br/>
 ## Usage
 Here is how you add horseback functionality to your application in `ConfigureServices()` of `program.cs` or `startup.cs`<br/>
 ```c#
@@ -19,6 +19,7 @@ services
   .AddHorseback()
   .AddAzureServiceBus(connectionString: connectionString, topicName: "topic1");
 ```
+
 To add subscribers (Receivers):
 ```c#
 services.AddHorseback()
