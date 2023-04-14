@@ -6,7 +6,7 @@ namespace Horseback.Core.EventBus
 {
     public interface IMessageSubscriber : IAsyncDisposable
     {
-        Task Subscribe(string? topic = null, CancellationToken cancellationToken = default);
+        Task Subscribe(CancellationToken cancellationToken = default);
         Task CloseQueueAsync();
     }
 

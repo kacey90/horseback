@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <Title>Horseback</Title>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-	<Version>1.0.1-beta-$([System.DateTime]::UtcNow.ToString(yyyyMMdd-HHmmss))</Version>
+	<Version>1.0.1-beta-$([System.DateTime]::UtcNow.ToString(yyyyMMdd-HH))</Version>
     <Description>A simple message bus wrapper for distributed applications on .NET</Description>
     <PackageProjectUrl></PackageProjectUrl>
     <RepositoryUrl>https://github.com/kacey90/horseback</RepositoryUrl>

@@ -22,15 +22,15 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
         .ConfigureServices((hostContext, services) =>
         {
             string connectionString = hostContext.Configuration.GetConnectionString("AzureServiceBus") ?? "your-connection";
-            services.AddHorseback()
-                .AddAzureServiceBus(connectionString, "Sample.Broker")
-                .AddReceiver<SampleMessage, SampleMessageHandler>(nameof(SampleMessage))
-                .AddReceiver<OrderSentMessage, OrderSentMessageHandler>(nameof(OrderSentMessage));
-
             //services.AddHorseback()
-            //    .AddInboxMessagePattern(hostContext.Configuration.GetConnectionString("DbConnection"), "InboxMessages")
-            //    .AddAzureServiceBus(connectionString, "Sample.Broker")
-            //    .AddReceiver<SampleMessage>(nameof(SampleMessage))
-            //    .AddReceiver<OrderSentMessage>(nameof(OrderSentMessage));
+            //    .AddAzureServiceBus(connectionString: connectionString, topicName: "Sample.Broker")
+            //    .AddReceiver<SampleMessage, SampleMessageHandler>(messageAction: nameof(SampleMessage))
+            //    .AddReceiver<OrderSentMessage, OrderSentMessageHandler>(messageAction: nameof(OrderSentMessage));
+
+            services.AddHorseback()
+                .AddInboxMessagePattern(databaseConnection: hostContext.Configuration.GetConnectionString("DbConnection"), tableName: "InboxMessages")
+                .AddAzureServiceBus(connectionString: connectionString, topicName: "Sample.Broker")
+                .AddReceiver<SampleMessage>(messageAction: nameof(SampleMessage))
+                .AddReceiver<OrderSentMessage>(messageAction: nameof(OrderSentMessage));
         });
 

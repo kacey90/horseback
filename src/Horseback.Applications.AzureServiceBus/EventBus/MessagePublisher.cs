@@ -22,12 +22,14 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
 
         public MessagePublisher(
             ILogger<MessagePublisher> logger,
-            AzureServiceBusSubscriberConfiguration azureServiceBusConfig)
+            AzureServiceBusSubscriberConfiguration azureServiceBusConfig,
+            ServiceBusClient serviceBusClient,
+            ServiceBusAdministrationClient serviceBusAdministration)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _azureServiceBusConfig = azureServiceBusConfig;
-            _serviceBusClient = new ServiceBusClient(azureServiceBusConfig.ConnectionString);
-            _serviceBusAdminClient = new ServiceBusAdministrationClient(azureServiceBusConfig.ConnectionString);
+            _serviceBusClient = serviceBusClient;
+            _serviceBusAdminClient = serviceBusAdministration;
         }
 
         public ValueTask DisposeAsync()

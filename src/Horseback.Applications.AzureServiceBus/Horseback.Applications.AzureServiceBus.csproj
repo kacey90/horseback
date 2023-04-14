@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <Version>1.0.1-beta-$([System.DateTime]::UtcNow.ToString(yyyyMMdd-HHmmss))</Version>
+    <Version>1.0.1-beta-$([System.DateTime]::UtcNow.ToString(yyyyMMdd-HH))</Version>
     <PackageTags>messaging; message-bus; wrapper; distributed-messaging; message-broker;</PackageTags>
     <RepositoryUrl>https://github.com/kacey90/horseback</RepositoryUrl>
     <Description>Azure Service Bus implementation for Horseback</Description>

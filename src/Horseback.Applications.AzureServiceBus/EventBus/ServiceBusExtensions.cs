@@ -1,7 +1,9 @@
-﻿using Azure.Messaging.ServiceBus.Administration;
+﻿using Azure.Messaging.ServiceBus;
+using Azure.Messaging.ServiceBus.Administration;
 using Horseback.Applications.AzureServiceBus.EventBus.Configuration;
 using Horseback.Core.Abstractions;
 using Horseback.Core.EventBus;
+using Horseback.Core.EventBus.Config;
 using Horseback.Core.EventBus.Mappers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -44,6 +46,21 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
                 azureServiceBusConfig = new AzureServiceBusSubscriberConfiguration(connectionString, topicName);
             horsebackBuilder.Services.AddSingleton(azureServiceBusConfig);
 
+            var serviceBusClient = new ServiceBusClient(connectionString, new ServiceBusClientOptions
+            {
+                RetryOptions = new ServiceBusRetryOptions
+                {
+                    Mode = ServiceBusRetryMode.Exponential,
+                    Delay = TimeSpan.FromSeconds(1),
+                    MaxDelay = TimeSpan.FromSeconds(azureServiceBusConfig.CustomRetryDelay),
+                    MaxRetries = azureServiceBusConfig.CustomRetryCount
+                }
+            });
+            horsebackBuilder.Services.AddSingleton(serviceBusClient);
+
+            var serviceBusAdminClient = new ServiceBusAdministrationClient(connectionString);
+            horsebackBuilder.Services.AddSingleton(serviceBusAdminClient);
+
             horsebackBuilder.Services.AddSingleton<IMessagePublisher, MessagePublisher>();
 
             return new DefaultMessageBrokerBuilder(horsebackBuilder);
@@ -58,7 +75,7 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
         /// <param name="messageAction">specific type of message. Used to run filters on the topic</param>
         /// <returns></returns>
         public static IMessageBrokerBuilder AddReceiver<TIntegrationEvent, TIntegrationEventHandler>(
-            this IMessageBrokerBuilder builder, string messageAction)
+            this IMessageBrokerBuilder builder, string messageAction, string topic = "")
             where TIntegrationEvent : IntegrationEvent
             where TIntegrationEventHandler : class, IIntegrationEventHandler<TIntegrationEvent>
         {
@@ -73,6 +90,20 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
                 throw new Exception("Event mapping is not possible. Please ensure that this event is not already registered");
 
             builder.HorsebackBuilder.Services.AddSingleton(integrationEventMappingService);
+            if (!string.IsNullOrEmpty(topic))
+            {
+                builder.HorsebackBuilder.Services.AddSingleton(new MessageTopicRegistration(topic, typeof(TIntegrationEvent)));
+            }
+            else
+            {
+                // get topic from AzureServiceBusSubscriberConfiguration
+                var serviceBusSubscriberConfig = builder.HorsebackBuilder.Services.BuildServiceProvider().GetRequiredService<AzureServiceBusSubscriberConfiguration>();
+                if (serviceBusSubscriberConfig != null)
+                {
+                    builder.HorsebackBuilder.Services.AddSingleton(new MessageTopicRegistration(serviceBusSubscriberConfig.TopicName, typeof(TIntegrationEvent)));
+                }
+            }
+
             return builder;
         }
 
@@ -135,6 +166,8 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
                 await adminClient.CreateTopicAsync(topicName, cancellationToken);
             }
         }
+
+
 
         private static async Task CreateSubscription(
             string topicName,

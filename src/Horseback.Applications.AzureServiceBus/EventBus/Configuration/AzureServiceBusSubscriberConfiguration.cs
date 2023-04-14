@@ -13,7 +13,7 @@ namespace Horseback.Applications.AzureServiceBus.EventBus.Configuration
         private const int MaxConcurrentCallDefault = 1;
         private const bool AutoCompleteDefault = false;
         private const int CustomRetryCountDefault = 3;
-        private const int CustomRetryDelayDefault = 10;
+        private const int CustomRetryDelayDefault = 60;
         //private const int PrefetchCountDefault = 1;
 
         public AzureServiceBusSubscriberConfiguration(

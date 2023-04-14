@@ -11,6 +11,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Horseback.Core.EventBus;
 using Horseback.Core.EventBus.Mappers;
+using Horseback.Core.EventBus.Config;
 
 namespace Horseback.Applications.AzureServiceBus.EventBus
 {
@@ -24,27 +25,35 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
         private readonly ILogger<MessageSubscriber<TIntegrationEvent, TIntegrationEventHandler>> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly IntegrationEventMappingService _integrationEventMappingService;
+        private readonly string? _topic;
 
         private ServiceBusProcessor _serviceBusProcessor = null!;
 
         public MessageSubscriber(
+            ServiceBusClient serviceBusClient,
+            ServiceBusAdministrationClient serviceBusAdministration,
             AzureServiceBusSubscriberConfiguration azureServiceBusSubConfig,
             ILogger<MessageSubscriber<TIntegrationEvent, TIntegrationEventHandler>> logger,
             IServiceProvider serviceProvider,
-            IntegrationEventMappingService integrationEventMappingService)
+            IntegrationEventMappingService integrationEventMappingService,
+            IEnumerable<MessageTopicRegistration> topics)
         {
-            _serviceBusClient = new ServiceBusClient(azureServiceBusSubConfig.ConnectionString);
-            _administrationClient = new ServiceBusAdministrationClient(azureServiceBusSubConfig.ConnectionString);
+            _serviceBusClient = serviceBusClient;
+            _administrationClient = serviceBusAdministration;
             _azureServiceBusSubConfig = azureServiceBusSubConfig;
             _logger = logger;
             _serviceProvider = serviceProvider;
             _integrationEventMappingService = integrationEventMappingService;
+            _topic = topics.FirstOrDefault(t => t.SubscriberType == typeof(TIntegrationEvent))?.Topic;
         }
 
-        public async Task Subscribe(string? topic = null, CancellationToken cancellationToken = default)
+        public async Task Subscribe(CancellationToken cancellationToken = default)
         {
-            var topicName = topic ?? _azureServiceBusSubConfig.TopicName;
+            var topicName = _topic ?? _azureServiceBusSubConfig.TopicName;
             var subscriptionName = $"{topicName}_{typeof(TIntegrationEvent).Assembly.FullName.Split(',')[0].Trim()}_subscription";
+
+            await CreateTopic(topicName, cancellationToken).ConfigureAwait(false);
+            //await CreateSubscription(subscriptionName, topicName, cancellationToken).ConfigureAwait(false);
             
             _serviceBusProcessor = _serviceBusClient.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions
             {
@@ -91,6 +100,27 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
             _logger.LogInformation("Message processing started for topic {TopicName} and subscription {SubscriptionName}...",
                                topicName, subscriptionName);
             await _serviceBusProcessor.StartProcessingAsync(cancellationToken);
+        }
+
+        private async Task CreateTopic(string topicName, CancellationToken cancellationToken = default)
+        {
+            if (!await _administrationClient.TopicExistsAsync(topicName, cancellationToken))
+            {
+                _logger.LogInformation("Creating topic {TopicName} in Azure Service Bus...", topicName);
+                await _administrationClient.CreateTopicAsync(topicName, cancellationToken);
+            }
+        }
+
+        private async Task CreateSubscription(
+            string subscriptionName,
+            string topicName,
+            CancellationToken cancellationToken = default)
+        {
+            if (!await _administrationClient.SubscriptionExistsAsync(topicName, subscriptionName, cancellationToken))
+            {
+                _logger.LogInformation("Creating subscription {SubscriptionName} in Azure Service Bus...", subscriptionName);
+                await _administrationClient.CreateSubscriptionAsync(topicName, subscriptionName);
+            }
         }
 
         private async Task RemoveDefaultFilters(string subscriptionName)
