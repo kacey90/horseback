@@ -53,7 +53,7 @@ namespace Horseback.Applications.AzureServiceBus.EventBus
             var subscriptionName = $"{topicName}_{typeof(TIntegrationEvent).Assembly.FullName.Split(',')[0].Trim()}_subscription";
 
             await CreateTopic(topicName, cancellationToken).ConfigureAwait(false);
-            //await CreateSubscription(subscriptionName, topicName, cancellationToken).ConfigureAwait(false);
+            await CreateSubscription(subscriptionName, topicName, cancellationToken).ConfigureAwait(false);
             
             _serviceBusProcessor = _serviceBusClient.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions
             {
